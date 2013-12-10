@@ -1,0 +1,10 @@
+D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\班級缺曠獎懲總表.csprojResolveAssemblyReference.cache
+D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\班級缺曠獎懲總表.MainForm.resources
+D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\班級缺曠獎懲總表.Properties.Resources.resources
+D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\班級缺曠獎懲總表.csproj.GenerateResource.Cache
+D:\ischool desktop\addmodules\Application1\班級缺曠獎懲總表.dll
+D:\ischool desktop\addmodules\Application1\班級缺曠獎懲總表.pdb
+D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\班級缺曠獎懲總表.dll
+D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\班級缺曠獎懲總表.pdb
+D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\班級缺曠獎懲總表.SelectTypeForm.resources
+D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\班級缺曠獎懲總表.SelectPrintSizeForm.resources
