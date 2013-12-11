@@ -24,6 +24,8 @@ namespace ClassPeriodDetail
         Workbook _WK;
         Dictionary<int, int> _CountAllColumnValue; //建立存放各項目加總的字典
         Dictionary<String, String> _ClassNameDic; //班級名稱字典
+        int _StartIndex = 3;
+        int _DynamicIndex = 16;
         /// <summary>
         /// 目前僅記錄列印紙張尺寸
         /// </summary>
@@ -110,7 +112,7 @@ namespace ClassPeriodDetail
             List<String> StudentIDList = new List<string>(); //學生ID清單
             foreach (ClassRecord classrecord in allClasses)
             {
-                if(!_ClassNameDic.ContainsKey(classrecord.ID)) //儲存班級ID及Name方便往後查詢
+                if (!_ClassNameDic.ContainsKey(classrecord.ID)) //儲存班級ID及Name方便往後查詢
                 {
                     _ClassNameDic.Add(classrecord.ID, classrecord.Name);
                 }
@@ -128,7 +130,7 @@ namespace ClassPeriodDetail
 
             //建立班級字典存放各班級的學生
             Dictionary<String, List<StudentRecord>> classDic = new Dictionary<string, List<StudentRecord>>();
-            
+
             foreach (StudentRecord student in studentList)
             {
                 if (!classDic.ContainsKey(student.RefClassID)) //若該班級ID不存在就建立key
@@ -188,17 +190,17 @@ namespace ClassPeriodDetail
                 MeritDemeritAttDic[each.RefStudentID].DemeritCCount += each.DemeritC.HasValue ? each.DemeritC.Value : 0;
             }
 
-            //取得有效的節次清單
-            List<String> periodList = new List<string>();
+            //取得節次對照表
+            Dictionary<String, String> periodDic = new Dictionary<String, String>();
             foreach (PeriodMappingInfo var in PeriodMapping.SelectAll())
             {
-                if (!periodList.Contains(var.Name))
+                if (!periodDic.ContainsKey(var.Name))
                 {
-                    periodList.Add(var.Name);
+                    periodDic.Add(var.Name, var.Type); //key=升降旗,一,二,三,午休...etc , value=一般,集會...etc
                 }
             }
 
-            ////取得影響缺曠紀錄的假別清單
+            //取得影響缺曠紀錄的假別清單
             List<AbsenceMappingInfo> infoList = K12.Data.AbsenceMapping.SelectAll();
             List<String> Absence = new List<string>();
 
@@ -221,10 +223,10 @@ namespace ClassPeriodDetail
 
                 foreach (AttendancePeriod _Period in each.PeriodDetail)
                 {
-                    if (periodList.Contains(_Period.Period)) //確認是否有此節次
+                    if (periodDic.ContainsKey(_Period.Period)) //確認是否有此節次
                     {
-                        string typename = _Period.AbsenceType;
-                        if (Absence.Contains(typename)) //如果此缺曠紀錄的假別會影響全勤,該學生的前勤紀錄則為false
+                        string typename = periodDic[_Period.Period] + "_" + _Period.AbsenceType; //ex...一般_曠課,集會_曠課
+                        if (Absence.Contains(_Period.AbsenceType)) //如果此缺曠紀錄的假別會影響全勤,該學生的前勤紀錄則為false
                         {
                             MeritDemeritAttDic[each.RefStudentID].全勤 = false;
                         }
@@ -265,59 +267,86 @@ namespace ClassPeriodDetail
             prototype.Copy(template);
 
             Worksheet prototypeSheet;
+
+            #region 範本sheet製作
+            //在範本sheet新增假別欄位
+            prototypeSheet = prototype.Worksheets[0];
+            for (int i = 0; i < DisplayList.Count; i++) //依照勾選的顯示清單數量插入新的欄位
+            {
+                prototypeSheet.Cells.InsertColumn(_DynamicIndex + 1);
+            }
+
+            //刪除兩個範本格式Column
+            prototypeSheet.Cells.DeleteColumn(_DynamicIndex);
+            prototypeSheet.Cells.DeleteColumn(_DynamicIndex);
+
+            //標記新增的假別項目欄位索引
+            Dictionary<string, int> columnIndexTable = new Dictionary<string, int>(); //Excel欄位索引
+            //標記欄位索引
+            int index = _DynamicIndex;
+            columnIndexTable.Add("座號", 0);
+            columnIndexTable.Add("學號", 1);
+            columnIndexTable.Add("姓名", 2);
+            columnIndexTable.Add("嘉獎", 3);
+            columnIndexTable.Add("小功", 4);
+            columnIndexTable.Add("大功", 5);
+            columnIndexTable.Add("警告", 6);
+            columnIndexTable.Add("小過", 7);
+            columnIndexTable.Add("大過", 8);
+            columnIndexTable.Add("累嘉獎", 9);
+            columnIndexTable.Add("累小功", 10);
+            columnIndexTable.Add("累大功", 11);
+            columnIndexTable.Add("累警告", 12);
+            columnIndexTable.Add("累小過", 13);
+            columnIndexTable.Add("累大過", 14);
+            columnIndexTable.Add("留查", 15);
+            //標記動態欄位索引並列印標題
+            Dictionary<String, int> mergeIndex = new Dictionary<string, int>(); //紀錄需要merge的column數量
+            foreach (String str in DisplayList)
+            {
+                columnIndexTable.Add(str, index); //標記動態欄位索引
+                String[] strs = str.Split('_'); //將"一般_曠課"字串以_字元拆開
+                prototypeSheet.Cells[2, columnIndexTable[str]].PutValue(strs[1]); //列印標題...ex:曠課
+                if (!mergeIndex.ContainsKey(strs[0])) //若是相同title,則數量加1
+                {
+                    mergeIndex.Add(strs[0], 0);
+                }
+                mergeIndex[strs[0]]++; //若是相同title,則數量加1
+                index++;
+            }
+
+            int start = _DynamicIndex; //merge的起始值
+            foreach (String s in mergeIndex.Keys)
+            {
+                prototypeSheet.Cells.CreateRange(1, start, 1, mergeIndex[s]).Merge();
+                prototypeSheet.Cells[1, start].PutValue(s);
+                start += mergeIndex[s];
+            }
+
+            //全勤為最後標記
+            columnIndexTable.Add("全勤", index);
+
+            #endregion
+
+            #region 各班級sheet製作
             int page = 1;
             foreach (String id in classDic.Keys)
             {
-                prototype.Worksheets.AddCopy(0); //依照所選的班級數量新增分頁
+                prototype.Worksheets.AddCopy(0); //複製範本sheet
                 prototypeSheet = prototype.Worksheets[page]; //從第二個分頁開始畫製表格,page++;
                 prototypeSheet.Name = GetClassName(id); //sheet.Name = 班級名稱
 
                 //每5行加一條分隔線
-                Range eachFiveLine = prototype.Worksheets[0].Cells.CreateRange(2, 5, false); //從第一個sheet複製
-                for (int i = 2; i < classDic[id].Count + 2; i += 5)  //依照該班級學生數給予適量的分隔線
+                Range eachFiveLine = prototype.Worksheets[0].Cells.CreateRange(_StartIndex, 5, false); //從第一個sheet複製
+                for (int i = _StartIndex; i < classDic[id].Count + _StartIndex; i += 5)  //依照該班級學生數給予適量的分隔線
                 {
                     prototypeSheet.Cells.CreateRange(i, 5, false).Copy(eachFiveLine);
-                }
-
-                //假別新增欄位
-                Range addColumn = prototypeSheet.Cells.CreateRange(3, 1, true);
-                for (int i = 19; i < 19 + DisplayList.Count; i++) //依照勾選的顯示清單新增欄位
-                {
-                    prototypeSheet.Cells.CreateRange(i, 1, true).Copy(addColumn);
                 }
                 page++; //完成一個班級換下個sheet的畫製
             }
 
             prototype.Worksheets.RemoveAt(0); //都完成後刪除第一個範本sheet
-
-            Dictionary<string, int> columnIndexTable = new Dictionary<string, int>(); //Excel欄位索引
-            //標記欄位索引
-            columnIndexTable.Add("座號", 0);
-            columnIndexTable.Add("學號", 1);
-            columnIndexTable.Add("姓名", 2);
-            columnIndexTable.Add("嘉獎", 4);
-            columnIndexTable.Add("小功", 5);
-            columnIndexTable.Add("大功", 6);
-            columnIndexTable.Add("警告", 7);
-            columnIndexTable.Add("小過", 8);
-            columnIndexTable.Add("大過", 9);
-            columnIndexTable.Add("累嘉獎", 10);
-            columnIndexTable.Add("累小功", 11);
-            columnIndexTable.Add("累大功", 12);
-            columnIndexTable.Add("累警告", 13);
-            columnIndexTable.Add("累小過", 14);
-            columnIndexTable.Add("累大過", 15);
-            columnIndexTable.Add("留查", 16);
-            columnIndexTable.Add("輔安", 17);
-            columnIndexTable.Add("全勤", 18);
-
-            int index = 19;
-            //標記新增的假別項目欄位索引
-            foreach (String str in DisplayList)
-            {
-                columnIndexTable.Add(str, index);
-                index++;
-            }
+            #endregion
 
             #endregion
 
@@ -339,18 +368,14 @@ namespace ClassPeriodDetail
 
             float progress = 50;
             float rate = (float)(100 - progress) / totalStudent; //進度百分比計算
-            
+
             foreach (String classid in classDic.Keys)
             {
                 ws = _WK.Worksheets[sheetIndex];
                 cs = ws.Cells;
-                //列印標題項目,曠課..病假..喪假...etc
-                foreach (String type in DisplayList)
-                {
-                    cs[1, columnIndexTable[type]].PutValue(type);
-                }
 
-                index = 2; //列印起始索引
+
+                index = _StartIndex; //列印起始索引
                 _CountAllColumnValue = new Dictionary<int, int>(); //重制個項目的總數
                 foreach (StudentRecord student in classDic[classid])
                 {
@@ -498,7 +523,7 @@ namespace ClassPeriodDetail
         //修正Excel輸出的索引值,補滿五個row為一單位
         private int FixIndex(int index)
         {
-            int temp = (index - 2) % 5;
+            int temp = (index - _StartIndex) % 5;
             if (temp != 0)
             {
                 int add = 0;
@@ -537,7 +562,8 @@ namespace ClassPeriodDetail
                     foreach (XmlElement elem in print.SelectNodes("//Type"))
                     {
                         String text = elem.GetAttribute("Text");
-                        displayList.Add(text);
+                        String value = elem.GetAttribute("Value");
+                        displayList.Add(text + "_" + value);
                     }
                 }
                 catch

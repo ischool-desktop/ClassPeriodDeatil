@@ -24,6 +24,7 @@ namespace ClassPeriodDetail
         private string name = "假別設定";
         private BackgroundWorker _BGWAbsenceAndPeriodList;
 
+        private List<String> typeList = new List<string>();
         private List<String> absenceList = new List<string>();
 
         public SelectTypeForm(String name)
@@ -64,9 +65,14 @@ namespace ClassPeriodDetail
             }
 
             //新增一個row
-            DataGridViewRow addrow = new DataGridViewRow();
-            addrow.CreateCells(dataGridViewX1, "是否列印");
-            this.dataGridViewX1.Rows.Add(addrow);
+            foreach(String type in typeList)
+            {
+                DataGridViewRow addrow = new DataGridViewRow();
+                addrow.CreateCells(dataGridViewX1, type);
+                addrow.Tag = type;
+                this.dataGridViewX1.Rows.Add(addrow);
+            }
+            
             #endregion
 
             #region 讀取上次設定
@@ -80,12 +86,13 @@ namespace ClassPeriodDetail
                     foreach (XmlElement elem in config.SelectNodes("//Type"))
                     {
                         String text = elem.GetAttribute("Text");
+                        String value = elem.GetAttribute("Value");
                         foreach (DataGridViewRow row in dataGridViewX1.Rows)
                         {
                             foreach (DataGridViewCell cell in row.Cells)
                             {
-                                if (cell.OwningColumn.Tag == null) continue;
-                                if (cell.OwningColumn.Tag.ToString() == text)
+                                if (cell.OwningRow.Tag == null || cell.OwningColumn.Tag == null) continue;
+                                if (cell.OwningRow.Tag.ToString() == text && cell.OwningColumn.Tag.ToString() == value)
                                     cell.Value = true;
                             }
                         }
@@ -102,6 +109,13 @@ namespace ClassPeriodDetail
 
         private void _BGWAbsenceAndPeriodList_DoWork(object sender, DoWorkEventArgs e)
         {
+            //取得節次分類
+            foreach (SHPeriodMappingInfo info in SHPeriodMapping.SelectAll())
+            {
+                if (!typeList.Contains(info.Type))
+                    typeList.Add(info.Type);
+            }
+
             //取得所有假別種類
             List<AbsenceMappingInfo> Absencelist = K12.Data.AbsenceMapping.SelectAll();
             foreach (AbsenceMappingInfo var in Absencelist)
@@ -112,7 +126,7 @@ namespace ClassPeriodDetail
         }
 
         private void buttonX1_Click(object sender, EventArgs e)
-        { 
+        {
             XmlElement config = new XmlDocument().CreateElement("TypeList");
             foreach (DataGridViewRow row in dataGridViewX1.Rows)
             {
@@ -126,7 +140,8 @@ namespace ClassPeriodDetail
                             if(value)
                             {
                                 XmlElement type = config.OwnerDocument.CreateElement("Type");
-                                type.SetAttribute("Text", cell.OwningColumn.Tag.ToString());
+                                type.SetAttribute("Text", cell.OwningRow.Tag.ToString());
+                                type.SetAttribute("Value", cell.OwningColumn.Tag.ToString());
                                 config.AppendChild(type);
                             }
                         }
