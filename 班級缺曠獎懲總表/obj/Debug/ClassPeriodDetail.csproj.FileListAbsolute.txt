@@ -4,7 +4,15 @@ D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\Class
 D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.SelectPrintSizeForm.resources
 D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.SelectTypeForm.resources
 D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.csproj.GenerateResource.Cache
-D:\ischool desktop\addmodules\Application1\ClassPeriodDetail.dll
-D:\ischool desktop\addmodules\Application1\ClassPeriodDetail.pdb
 D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.dll
 D:\GitHub2\PJ6\班級缺曠獎懲總表\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.pdb
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\bin\Debug\ClassPeriodDetail.dll
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\bin\Debug\ClassPeriodDetail.pdb
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.csprojResolveAssemblyReference.cache
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.MainForm.resources
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.Properties.Resources.resources
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.SelectPrintSizeForm.resources
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.SelectTypeForm.resources
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.csproj.GenerateResource.Cache
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.dll
+D:\GitHub2\班級缺曠獎懲\ClassPeriodDeatil\班級缺曠獎懲總表\obj\Debug\ClassPeriodDetail.pdb

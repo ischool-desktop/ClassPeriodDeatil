@@ -164,8 +164,15 @@ namespace ClassPeriodDetail
 
             foreach (SHMeritRecord each in SHMerit.SelectByStudentIDs(StudentIDList))
             {
-                if (each.SchoolYear != _Schoolyear || each.Semester != _Semester)
-                    continue;
+                if (_Semester == 1)
+                {
+                    if (each.SchoolYear != _Schoolyear || each.Semester != _Semester)
+                        continue;
+                }
+                else
+                {
+                    if (each.SchoolYear != _Schoolyear) continue;
+                }
 
                 MeritDemeritAttDic[each.RefStudentID].MeritACount += each.MeritA.HasValue ? each.MeritA.Value : 0;
                 MeritDemeritAttDic[each.RefStudentID].MeritBCount += each.MeritB.HasValue ? each.MeritB.Value : 0;
@@ -175,8 +182,15 @@ namespace ClassPeriodDetail
             //懲罰紀錄
             foreach (SHDemeritRecord each in SHDemerit.SelectByStudentIDs(StudentIDList))
             {
-                if (each.SchoolYear != _Schoolyear || each.Semester != _Semester)
-                    continue;
+                if (_Semester == 1)
+                {
+                    if (each.SchoolYear != _Schoolyear || each.Semester != _Semester)
+                        continue;
+                }
+                else
+                {
+                    if (each.SchoolYear != _Schoolyear) continue;
+                }
 
                 if (each.Cleared == "是")
                     continue;
