@@ -26,6 +26,7 @@ namespace ClassPeriodDetail
         Dictionary<String, String> _ClassNameDic; //班級名稱字典
         int _StartIndex = 3;
         int _DynamicIndex = 16;
+        List<string> _AbsenceType;
         /// <summary>
         /// 目前僅記錄列印紙張尺寸
         /// </summary>
@@ -47,6 +48,7 @@ namespace ClassPeriodDetail
             intSchoolYear.Value = int.Parse(K12.Data.School.DefaultSchoolYear);
             intSemester.Value = int.Parse(K12.Data.School.DefaultSemester);
             _ClassNameDic = new Dictionary<string, string>();
+            _AbsenceType = new List<string>();
 
             BGW = new BackgroundWorker();
             BGW.WorkerReportsProgress = true;
@@ -101,6 +103,11 @@ namespace ClassPeriodDetail
 
         private void BGW_DoWork(object sender, DoWorkEventArgs e)
         {
+            //取得列印紙張
+            int sizeIndex = GetSizeIndex();
+            //取得需列印的項目清單
+            List<String> DisplayList = GetUserType();
+
             //取得資料
             BGW.ReportProgress(10, "取得所選班級");
             #region 取得使用者所選擇的班級學生
@@ -216,15 +223,15 @@ namespace ClassPeriodDetail
 
             //取得影響缺曠紀錄的假別清單
             List<AbsenceMappingInfo> infoList = K12.Data.AbsenceMapping.SelectAll();
-            List<String> Absence = new List<string>();
+            List<String> Noabsence = new List<string>();
 
             foreach (AbsenceMappingInfo info in infoList)
             {
                 if (!info.Noabsence) //若該假別會影響全勤就加入清單
                 {
-                    if (!Absence.Contains(info.Name))
+                    if (!Noabsence.Contains(info.Name))
                     {
-                        Absence.Add(info.Name);
+                        Noabsence.Add(info.Name);
                     }
                 }
             }
@@ -235,24 +242,23 @@ namespace ClassPeriodDetail
                 if (each.SchoolYear != _Schoolyear || each.Semester != _Semester)
                     continue;
 
-                foreach (AttendancePeriod _Period in each.PeriodDetail)
+                foreach (AttendancePeriod record in each.PeriodDetail)
                 {
-                    if (periodDic.ContainsKey(_Period.Period)) //確認是否有此節次
+                    if (periodDic.ContainsKey(record.Period)) //確認是否有此節次
                     {
-                        string typename = periodDic[_Period.Period] + "_" + _Period.AbsenceType; //ex...一般_曠課,集會_曠課
-                        if (Absence.Contains(_Period.AbsenceType)) //如果此缺曠紀錄的假別會影響全勤,該學生的前勤紀錄則為false
+                        string typename = periodDic[record.Period] + "_" + record.AbsenceType; //ex...一般_曠課,集會_曠課
+
+                        if (!DisplayList.Contains(typename)) continue;
+
+                        if (Noabsence.Contains(record.AbsenceType)) //如果此缺曠紀錄的假別會影響全勤,該學生的前勤紀錄則為false
                         {
                             MeritDemeritAttDic[each.RefStudentID].全勤 = false;
                         }
 
-                        if (MeritDemeritAttDic[each.RefStudentID].Attendance.ContainsKey(typename)) //若該學生有此缺曠紀錄的類別
-                        {
-                            MeritDemeritAttDic[each.RefStudentID].Attendance[typename]++;
-                        }
-                        else
-                        {
-                            MeritDemeritAttDic[each.RefStudentID].Attendance.Add(typename, 1);
-                        }
+                        if (!MeritDemeritAttDic[each.RefStudentID].Attendance.ContainsKey(record.AbsenceType))
+                            MeritDemeritAttDic[each.RefStudentID].Attendance.Add(record.AbsenceType, 0);
+
+                        MeritDemeritAttDic[each.RefStudentID].Attendance[record.AbsenceType]++;
                     }
 
                 }
@@ -265,18 +271,13 @@ namespace ClassPeriodDetail
             Workbook template = new Workbook();
             Workbook prototype = new Workbook();
 
-            //取得列印紙張
-            int sizeIndex = GetSizeIndex();
-            //取得需列印的項目清單
-            List<String> DisplayList = GetUserType();
-
             //列印尺寸
             if (sizeIndex == 0)
-                template.Open(new MemoryStream(Properties.Resources.班級缺曠獎懲總表A3), FileFormatType.Excel2003);
+                template.Open(new MemoryStream(Properties.Resources.班級缺曠獎懲總表A3));
             else if (sizeIndex == 1)
-                template.Open(new MemoryStream(Properties.Resources.班級缺曠獎懲總表A4), FileFormatType.Excel2003);
+                template.Open(new MemoryStream(Properties.Resources.班級缺曠獎懲總表A4));
             else if (sizeIndex == 2)
-                template.Open(new MemoryStream(Properties.Resources.班級缺曠獎懲總表B4), FileFormatType.Excel2003);
+                template.Open(new MemoryStream(Properties.Resources.班級缺曠獎懲總表B4));
 
             prototype.Copy(template);
 
@@ -285,9 +286,18 @@ namespace ClassPeriodDetail
             #region 範本sheet製作
             //在範本sheet新增假別欄位
             prototypeSheet = prototype.Worksheets[0];
-            for (int i = 0; i < DisplayList.Count; i++) //依照勾選的顯示清單數量插入新的欄位
+
+            _AbsenceType.Clear();
+            foreach (string item in DisplayList)
             {
-                prototypeSheet.Cells.InsertColumn(_DynamicIndex + 1);
+                string type = item.Split('_')[1];
+                if (!_AbsenceType.Contains(type))
+                    _AbsenceType.Add(type);
+            }
+
+            for (int i = 0; i < _AbsenceType.Count; i++) //依照勾選的顯示清單數量插入新的欄位
+            {
+                prototypeSheet.Cells.InsertColumn(_DynamicIndex+1);
             }
 
             //刪除兩個範本格式Column
@@ -315,30 +325,40 @@ namespace ClassPeriodDetail
             columnIndexTable.Add("累大過", 14);
             columnIndexTable.Add("留查", 15);
             //標記動態欄位索引並列印標題
-            Dictionary<String, int> mergeIndex = new Dictionary<string, int>(); //紀錄需要merge的column數量
-            foreach (String str in DisplayList)
+            //Dictionary<String, int> mergeIndex = new Dictionary<string, int>(); //紀錄需要merge的column數量
+            foreach (String type in _AbsenceType)
             {
-                columnIndexTable.Add(str, index); //標記動態欄位索引
-                String[] strs = str.Split('_'); //將"一般_曠課"字串以_字元拆開
-                prototypeSheet.Cells[2, columnIndexTable[str]].PutValue(strs[1]); //列印標題...ex:曠課
-                if (!mergeIndex.ContainsKey(strs[0])) //若是相同title,則數量加1
+                if (!columnIndexTable.ContainsKey(type))
                 {
-                    mergeIndex.Add(strs[0], 0);
+                    columnIndexTable.Add(type, index);
+                    prototypeSheet.Cells.CreateRange(1, columnIndexTable[type], 2, 1).Merge();
+                    prototypeSheet.Cells[1, columnIndexTable[type]].PutValue(type);
+                    index++;
                 }
-                mergeIndex[strs[0]]++; //若是相同title,則數量加1
-                index++;
+                //columnIndexTable.Add(str, index); //標記動態欄位索引
+                //String[] strs = str.Split('_'); //將"一般_曠課"字串以_字元拆開
+                //prototypeSheet.Cells[2, columnIndexTable[str]].PutValue(strs[1]); //列印標題...ex:曠課
+                //if (!mergeIndex.ContainsKey(strs[0])) //若是相同title,則數量加1
+                //{
+                    //mergeIndex.Add(strs[0], 0);
+                //}
+                //mergeIndex[strs[0]]++; //若是相同title,則數量加1
             }
 
-            int start = _DynamicIndex; //merge的起始值
-            foreach (String s in mergeIndex.Keys)
-            {
-                prototypeSheet.Cells.CreateRange(1, start, 1, mergeIndex[s]).Merge();
-                prototypeSheet.Cells[1, start].PutValue(s);
-                start += mergeIndex[s];
-            }
+            
+            //int start = _DynamicIndex; //merge的起始值
+            //foreach (String s in mergeIndex.Keys)
+            //{
+            //    prototypeSheet.Cells.CreateRange(1, start, 1, mergeIndex[s]).Merge();
+            //    prototypeSheet.Cells[1, start].PutValue(s);
+            //    start += mergeIndex[s];
+            //}
 
             //全勤為最後標記
             columnIndexTable.Add("全勤", index);
+
+            for (int i = 3; i <= index; i++)
+                prototypeSheet.Cells.SetColumnWidth(i, 11);
 
             #endregion
 
@@ -354,7 +374,7 @@ namespace ClassPeriodDetail
                 Range eachFiveLine = prototype.Worksheets[0].Cells.CreateRange(_StartIndex, 5, false); //從第一個sheet複製
                 for (int i = _StartIndex; i < classDic[id].Count + _StartIndex; i += 5)  //依照該班級學生數給予適量的分隔線
                 {
-                    prototypeSheet.Cells.CreateRange(i, 5, false).Copy(eachFiveLine);
+                    prototypeSheet.Cells.CreateRange(i, 5, false).CopyStyle(eachFiveLine);
                 }
                 page++; //完成一個班級換下個sheet的畫製
             }
@@ -387,7 +407,6 @@ namespace ClassPeriodDetail
             {
                 ws = _WK.Worksheets[sheetIndex];
                 cs = ws.Cells;
-
 
                 index = _StartIndex; //列印起始索引
                 _CountAllColumnValue = new Dictionary<int, int>(); //重制個項目的總數
@@ -439,7 +458,7 @@ namespace ClassPeriodDetail
                     SetColumnValue(cs[index, columnIndexTable["留查"]], MeritDemeritAttDic[id].Flag ? "是" : "");
                     SetColumnValue(cs[index, columnIndexTable["全勤"]], MeritDemeritAttDic[id].全勤 ? "是" : "");
 
-                    foreach (String type in DisplayList)  //列印勾選的假別
+                    foreach (String type in _AbsenceType)  //列印勾選的假別
                     {
                         if (MeritDemeritAttDic[id].Attendance.ContainsKey(type))
                         {
@@ -466,11 +485,18 @@ namespace ClassPeriodDetail
                 String title = String.Format("{0} {1} 學年度 {2} 學期 {3} 缺曠獎懲總表", K12.Data.School.ChineseName, _Schoolyear, _Semester == 1 ? "上" : "下", GetClassName(classid));
 
                 cs[0, 3].PutValue(title);
-                cs[0, 3].Style.Font.Size = 20; //設定標題文字大小
+                cs[0, 3].Style.Font.Size = 28; //設定標題文字大小
+                cs[0, 3].Style.Font.IsBold = true;
                 sheetIndex++; //換下一個sheet(下一個班級班)
             }
 
-            BGW.ReportProgress(100, "已完成 班級缺曠獎懲總表");
+            //int sheet = _WK.Worksheets.Count;
+            //for (int i = 0; i < sheet; i++)
+            //{
+            //    _WK.Worksheets[i].AutoFitColumns();
+            //    _WK.Worksheets[i].AutoFitRows();
+            //}
+                BGW.ReportProgress(100, "已完成 班級缺曠獎懲總表");
 
             #endregion
         }
