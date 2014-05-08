@@ -49,7 +49,7 @@
             this.labelX1.Name = "labelX1";
             this.labelX1.Size = new System.Drawing.Size(144, 23);
             this.labelX1.TabIndex = 0;
-            this.labelX1.Text = "請選擇您要列印的假別";
+            this.labelX1.Text = "請選擇您要統計的假別";
             // 
             // dataGridViewX1
             // 
